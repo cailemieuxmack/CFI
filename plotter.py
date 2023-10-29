@@ -27,9 +27,19 @@ def main():
         cols = copy(d.fieldnames)
         cols.remove("sys_util")
 
+        # Sort data by sys_util
+        tmp = zip(data['sys_util'], range(0,len(data['sys_util'])))
+        tmp = sorted(tmp)
+        data_sorted = defaultdict(list)
+        for row in d.fieldnames:
+            for i in tmp:
+                data_sorted[row].append(data[row][i[1]])
+
+
+
         plt.figure(figsize=(8,4))
         for style, col in enumerate(cols):
-            plt.plot(data["sys_util"], data[col], LINE_STYLE[style], label=col, linewidth=2.0)
+            plt.plot(data_sorted["sys_util"], data_sorted[col], LINE_STYLE[style], label=col, linewidth=2.0)
 
         plt.legend(loc="lower left")
         
