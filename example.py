@@ -48,17 +48,17 @@ CONFIDENCE  = 0.95
 
 # These need to be set from Jay's measurements
 # Need milliseconds
-#trying microseconds
-BUFFER_RATE = 20000000000/14687
+#trying microseconds???
+#BUFFER_RATE = 20000000000/14687
 BUFFER_DELAY = 8500/20000000000
-MEAN = 28.68593064
-STDEV = 22.86616364
+# MEAN = 28.68593064
+# STDEV = 22.86616364
 
-NAMED_CS_LENGTHS = {
-    'short'         : uniform(1, 15),
-    'moderate'      : uniform(1, 100),
-    'long'          : uniform(5, 1280)
-}
+# NAMED_CS_LENGTHS = {
+#     'short'         : uniform(1, 15),
+#     'moderate'      : uniform(1, 100),
+#     'long'          : uniform(5, 1280)
+# }
 
 # FIXME This is to resolve import error
 class BernoulliEstimator(object):
@@ -179,7 +179,7 @@ class DesignPoint(object):
             # things. A classic example, if the task system isn't schedulable
             # without any synchronization, it isn't schedulable with it.
             if True: #fp.rta.is_schedulable(self.processors, org_ts):
-                self.data["RTA_NORM"].add_sample(True)
+                #self.data["RTA_NORM"].add_sample(True)
 
                 tests_remaining = [self.rta_deta, self.rta_norm]      #[self.omlp, self.fmlp_sob, self.fmlp_saware]
 
@@ -201,7 +201,7 @@ class DesignPoint(object):
             delta = sum([t.cost for t in higher_prio_tasks]) + own_demand
             while delta <= task.deadline:
                 #                     Added delay term        + 1 here for pessimism
-                demand = own_demand + ((buffer_rate * delta ) + 1) * BUFFER_DELAY
+                demand = own_demand + (((buffer_rate * delta ) + 1) * BUFFER_DELAY)
                 for t in higher_prio_tasks:
                     demand += t.cost * int(ceil(delta/ t.period))
                 if demand == delta:
@@ -365,7 +365,7 @@ def main():
     # params.period = ['uni-moderate']
     params.sys_util = myrange(0.25, 4.0, 0.25)
     #params.cs_length = ['small', 'moderate', 'large', 'variant']
-    params.cs_length = ['moderate', 'long']
+    # params.cs_length = ['moderate', 'long']
     params.req_perc = [0.1, 1.0]
 
     exp = ExperimentManager(params, args.outfile)
