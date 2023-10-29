@@ -51,6 +51,7 @@ CONFIDENCE  = 0.95
 #trying microseconds???
 #BUFFER_RATE = 20000000000/14687
 BUFFER_DELAY = 8500/20
+INDV_DELAY = BUFFER_DELAY/512
 # MEAN = 28.68593064
 # STDEV = 22.86616364
 
@@ -201,9 +202,11 @@ class DesignPoint(object):
             delta = sum([t.cost for t in higher_prio_tasks]) + own_demand
             while delta <= task.deadline:
                 #                     Added delay term        + 1 here for pessimism
-                demand = own_demand + (((buffer_rate * delta ) + 1) * BUFFER_DELAY)
+                demand = own_demand #+ (((buffer_rate * delta ) + 1) * BUFFER_DELAY)
                 for t in higher_prio_tasks:
                     demand += t.cost * int(ceil(delta/ t.period))
+                demand *= (1 + (buffer_rate * INDV_DELAY))
+                demand += (512 * INDV_DELAY)
                 if demand == delta:
                     # yep, demand will be met by time
                     task.response_time = delta #+ task.__dict__.get('jitter', 0)
