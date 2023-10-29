@@ -215,8 +215,10 @@ class DesignPoint(object):
             return False
         
         def test():
+            #print(ts)
             buffer_rate = 20000000000/(abs(random.uniform(5,100)))
             #print buffer_rate
+            ts.sort(key=lambda task: task.period)
             for i, t in enumerate(ts):
                 if not rta(t, ts[0:i],buffer_rate):
                     return False
@@ -246,6 +248,7 @@ class DesignPoint(object):
             # if we get here, we didn't converge
             return False
         def test():
+            ts.sort(key=lambda task: task.period)
             for i, t in enumerate(ts):
                 if not rta(t, ts[0:i]):
                     return False
