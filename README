@@ -1,0 +1,8 @@
+Here is an example locking schedulability study. I have sanitized it somewhat to remove content that was specific to the paper it was for to try and make it a little more straightforward to build upon. As as result, it may not run as is.
+
+General workflow:
+1) modify example.py for your study
+2) run example.py
+3) Use csv2csvs to convert the one csv output to a collection of csv files. The arguments aren't that elegant, I always had to go back and debug my own code to figure out how to make it work.
+4) Apply plotter.py to each csv file to render a schedulability graph. You can pass in a bunch of arguments, so for example, run "plotter.py output_csv/*.csv" and it will generate all the graphs.
+

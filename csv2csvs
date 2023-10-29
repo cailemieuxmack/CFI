@@ -1,0 +1,95 @@
+#!/usr/bin/env python2
+import sys
+import argparse
+from csv import DictReader, DictWriter
+from collections import defaultdict
+import resource
+
+def dict_to_str(d):
+    return "-".join("{}_{}".format(key,value) for key,value in d.iteritems())
+
+def separate_dict(row, ignored):
+    constants = {}
+    values = {}
+    for key, value in row.iteritems():
+        if key in ignored:
+            values[key] = value
+        else:
+            constants[key] = value
+
+    return constants, values
+
+def constants_to_string(constants, value_counters):
+    return "-".join("{}_{}".format(key, constants[key])
+            for key in sorted(constants.keys())
+            if len(value_counters[key]) > 1)
+
+class Database(object):
+    def __init__(self, outdir, columns, header = True):
+        self.files = {}
+        self.writers = {}
+        self.outdir = outdir
+        self.columns = columns
+        self.count = 0
+        self.header = header
+
+    def writerow(self, key, value):
+        filename = self.key_to_filename(key)
+        if not self.files.has_key(key):
+            self.files[key] = open(filename, 'w')
+            self.writers[key] = DictWriter(self.files[key], self.columns, delimiter=',', skipinitialspace=1)
+            if self.header:
+                self.writers[key].writeheader()
+
+        self.count += 1
+        self.writers[key].writerow(value)
+
+    def key_to_filename(self, key):
+        return self.outdir+"/"+key+".csv"
+
+    def close(self):
+        for value in self.files.itervalues():
+            value.close()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', "--ignore", nargs='+', help="Ignored columns") # want to ignore rta_delta and rta_norm and sysutil
+    parser.add_argument('-o', "--outdir", default='.', help = "directory for csvs")
+    parser.add_argument('-s', "--sort", default="sys_util", help="column to sort by in final output")
+    parser.add_argument('-g', "--no-header", default=False, action='store_true', help="Do not write column headers e.g., for gnuplot plotting")
+    parser.add_argument('infile', type=argparse.FileType('r'), help="input csv file")
+    args = parser.parse_args()
+
+    input = DictReader(args.infile)
+
+    outfiles = {}
+
+    value_counters = defaultdict(set)
+
+    savedata = []
+    
+    if not args.ignore:
+        args.ignore = []
+
+    for row in input:
+        constants, values = separate_dict(row, args.ignore)
+        savedata.append((constants, values))
+
+        for key, value in constants.iteritems():
+            value_counters[key].add(value)
+
+    #savedata.sort(key=lambda (constants, values): values[args.sort])
+
+    resource.setrlimit(resource.RLIMIT_NOFILE, (4090,4090))
+
+    db = Database(args.outdir, args.ignore, header = not args.no_header)
+
+    for constants, values in savedata:
+        name = constants_to_string(constants, value_counters)
+        db.writerow(name, values)
+
+    db.close()
+
+if __name__ == '__main__':
+    main()
