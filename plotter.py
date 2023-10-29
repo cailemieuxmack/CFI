@@ -22,7 +22,7 @@ def main():
         data = defaultdict(list)
         for row in d:
             for key, value in row.iteritems():
-                data[key].append(value)
+                data[key].append(float(value))
 
         cols = copy(d.fieldnames)
         cols.remove("sys_util")
@@ -35,6 +35,9 @@ def main():
         
         plt.ylabel("HRT Schedulability")
         plt.xlabel("System Utilization")
+
+        # plt.xticks(np.arange(0,1,0.1), step=0.2)
+        # plt.yticks(np.arange(0,1,0.1), step=0.2)
 
         plt.savefig(file[:-4]+".pdf")
         plt.savefig(file[:-4]+".png")

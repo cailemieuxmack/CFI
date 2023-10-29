@@ -50,7 +50,7 @@ CONFIDENCE  = 0.95
 # Need milliseconds
 #trying microseconds???
 #BUFFER_RATE = 20000000000/14687
-BUFFER_DELAY = 8500/20000000000
+BUFFER_DELAY = 8500/20
 # MEAN = 28.68593064
 # STDEV = 22.86616364
 
@@ -216,7 +216,7 @@ class DesignPoint(object):
         
         def test():
             #print(ts)
-            buffer_rate = 20000000000/(abs(random.uniform(5,100)))
+            buffer_rate = 20/(random.uniform(5,100) * 512)
             #print buffer_rate
             ts.sort(key=lambda task: task.period)
             for i, t in enumerate(ts):
@@ -328,10 +328,10 @@ class DesignPoint(object):
         tg = tasks.TaskGenerator(period = NAMED_PERIODS[self.period],
                                     util   = NAMED_UTILIZATIONS[self.task_util])
 
-        ts = tg.make_task_set(max_util = self.sys_util, squeeze = True)#, time_conversion=ms2us)
+        ts = tg.make_task_set(max_util = self.sys_util, squeeze = True, time_conversion=ms2us)
 
-        resources.initialize_resource_model(ts)
-        bounds.assign_edf_preemption_levels(ts)
+        # resources.initialize_resource_model(ts)
+        # bounds.assign_edf_preemption_levels(ts)
 
         # for t in random.sample(ts, int(self.req_perc * len(ts))):
         #     t.resmodel[0].add_request(int(NAMED_CS_LENGTHS[self.cs_length]()))
@@ -361,15 +361,15 @@ def main():
 
     params = storage()
 
-    params.processors = [2, 4]
+    params.processors = [1]#[2, 4]
     params.task_util = NAMED_UTILIZATIONS #['uni-light', 'uni-medium', 'uni-heavy']
     params.period = NAMED_PERIODS #['uni-short', 'uni-moderate', 'uni-long']#, 'uni-broad']
     # params.task_util = ['exp-light', 'exp-medium']
     # params.period = ['uni-moderate']
-    params.sys_util = myrange(0.25, 4.0, 0.25)
+    params.sys_util = myrange(0.1, 1.1, 0.1)
     #params.cs_length = ['small', 'moderate', 'large', 'variant']
     # params.cs_length = ['moderate', 'long']
-    params.req_perc = [0.1, 1.0]
+    # params.req_perc = [0.1, 1.0]
 
     exp = ExperimentManager(params, args.outfile)
 
