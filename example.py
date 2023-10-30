@@ -195,7 +195,7 @@ class DesignPoint(object):
     
     # New testing functions
     def rta_deta(self, ts):
-        def rta(task,higher_prio_tasks, buffer_rate):
+        def rta(task,higher_prio_tasks):
             own_demand = task.__dict__.get('prio_inversion', 0) + task.cost
             #hp_jitter = task.__dict__.get('jitter', 0)
             # see if we find a point where the demand is satisfied
@@ -204,9 +204,9 @@ class DesignPoint(object):
                 #                     Added delay term        + 1 here for pessimism
                 demand = own_demand #+ (((buffer_rate * delta ) + 1) * BUFFER_DELAY)
                 for t in higher_prio_tasks:
-                    demand += t.cost * int(ceil(delta/ t.period))
-                demand *= (1 + (buffer_rate * INDV_DELAY))
-                demand += (512 * INDV_DELAY)
+                    demand += t.cost * int(ceil(delta/ t.period)) * (1 + (t.buffer_rate * INDV_DELAY))
+                # demand *= (1 + (task.buffer_rate * INDV_DELAY))
+                demand += (512 * INDV_DELAY) + (task.cost * task.buffer_rate * INDV_DELAY)
                 if demand == delta:
                     # yep, demand will be met by time
                     task.response_time = delta #+ task.__dict__.get('jitter', 0)
@@ -219,16 +219,18 @@ class DesignPoint(object):
         
         def test():
             #print(ts)
-            buffer_rate = 20/(random.uniform(5,100) * 512)
+            for t in ts:
+                t.buffer_rate = 20/(random.uniform(5,100) * 512)
             #print buffer_rate
             ts.sort(key=lambda task: task.period)
             for i, t in enumerate(ts):
-                if not rta(t, ts[0:i],buffer_rate):
+                if not rta(t, ts[0:i]):
                     return False
             return True
         res = test()
         self.data["RTA_DELTA"].add_sample(res)
         return res
+    
 
     def rta_norm(self, ts):
         def rta(task,higher_prio_tasks):
