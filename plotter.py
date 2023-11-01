@@ -9,11 +9,11 @@ from copy import copy
 from collections import defaultdict
 
 #regular
-LINE_STYLE = ['b:+', 'g-', 'r-s', 'c--', 'k-.', 'r--', 'g-x']
+#LINE_STYLE = ['b:+', 'g-', 'r-s', 'c--', 'k-.', 'r--', 'g-x']
 #increasingk
 #LINE_STYLE = ['b--s', 'b-s', 'g--x', 'g-x', 'r--', 'r-', 'k-.']
 #reqnum
-#LINE_STYLE = ['b-.', 'r--', 'g-', 'c:+', 'k:']
+LINE_STYLE = ['b-.', 'r--', 'g-', 'c:+', 'k:']
 
 def main():
     for file in sys.argv[1:]:

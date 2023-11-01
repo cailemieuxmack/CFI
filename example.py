@@ -50,8 +50,13 @@ CONFIDENCE  = 0.95
 # Need milliseconds
 #trying microseconds???
 #BUFFER_RATE = 20000000000/14687
-BUFFER_DELAY = 8500/20
-INDV_DELAY = BUFFER_DELAY/512
+#                FLUSH      + CHECK / CLOCK SPEED
+BUFFER_DELAY = 8832.513156/20   # (in micro seconds)
+INDV_DELAY = (BUFFER_DELAY/512) + 27.5
+
+INDV_DELAY_FILTER = (22197.39621/20)/512 + 27.5
+
+INDV_DELAY_SHERLOC = (9954.009864/20)/512 + 21.19754873
 # MEAN = 28.68593064
 # STDEV = 22.86616364
 
@@ -160,7 +165,7 @@ def pickleable_function(dp):
 
 class DesignPoint(object):
     # Update this
-    metrics = ["RTA_DELTA","RTA_NORM"]   #["OMLP", "FMLPOblivious", "FMLPAware", "NOLOCK"]
+    metrics = ["NOFILTER","FILTER","SOFTWARE","SHERLOC","NORMAL"]   #["OMLP", "FMLPOblivious", "FMLPAware", "NOLOCK"]
 
     # a graph which represents which tests can decide a metric on a given run.
     test_graph = {}
@@ -174,6 +179,9 @@ class DesignPoint(object):
         while not self.complete():
             org_ts = self.create_task_set()
 
+            # Give each task it's own (no select) buffer rate
+            for t in org_ts:
+                t.buffer_rate = 20/(random.uniform(5,100) * 512)
 
             # Write some logic to run all your tests here. This is often study
             # specific, as you can exploit domincance results to accelerate
@@ -182,7 +190,7 @@ class DesignPoint(object):
             if True: #fp.rta.is_schedulable(self.processors, org_ts):
                 #self.data["RTA_NORM"].add_sample(True)
 
-                tests_remaining = [self.rta_deta, self.rta_norm]      #[self.omlp, self.fmlp_sob, self.fmlp_saware]
+                tests_remaining = [self.no_filter, self.filter, self.sw, self.sherloc, self.normal]      #[self.omlp, self.fmlp_sob, self.fmlp_saware]
 
                 for test in tests_remaining:
                     ts = org_ts.copy()
@@ -194,7 +202,7 @@ class DesignPoint(object):
         return dict(self.levels.items() + [(k,v.mean) for (k,v) in self.data.iteritems()])
     
     # New testing functions
-    def rta_deta(self, ts):
+    def no_filter(self, ts):
         def rta(task,higher_prio_tasks):
             own_demand = task.__dict__.get('prio_inversion', 0) + task.cost
             #hp_jitter = task.__dict__.get('jitter', 0)
@@ -219,8 +227,8 @@ class DesignPoint(object):
         
         def test():
             #print(ts)
-            for t in ts:
-                t.buffer_rate = 20/(random.uniform(5,100) * 512)
+            # for t in ts:
+            #     t.buffer_rate = 20/(random.uniform(5,100) * 512)
             #print buffer_rate
             ts.sort(key=lambda task: task.period)
             for i, t in enumerate(ts):
@@ -228,11 +236,112 @@ class DesignPoint(object):
                     return False
             return True
         res = test()
-        self.data["RTA_DELTA"].add_sample(res)
+        self.data["NOFILTER"].add_sample(res)
         return res
     
+    def filter(self, ts):
+        def rta(task,higher_prio_tasks):
+            own_demand = task.__dict__.get('prio_inversion', 0) + task.cost
+            #hp_jitter = task.__dict__.get('jitter', 0)
+            # see if we find a point where the demand is satisfied
+            delta = sum([t.cost for t in higher_prio_tasks]) + own_demand
+            while delta <= task.deadline:
+                #                     Added delay term        + 1 here for pessimism
+                demand = own_demand #+ (((buffer_rate * delta ) + 1) * BUFFER_DELAY)
+                for t in higher_prio_tasks:
+                    demand += t.cost * int(ceil(delta/ t.period)) * (1 + (t.buffer_rate * INDV_DELAY_FILTER))
+                # demand *= (1 + (task.buffer_rate * INDV_DELAY))
+                demand += (512 * INDV_DELAY_FILTER) + (task.cost * task.buffer_rate * INDV_DELAY_FILTER)
+                if demand == delta:
+                    # yep, demand will be met by time
+                    task.response_time = delta #+ task.__dict__.get('jitter', 0)
+                    return True
+                else:
+                    # try again
+                    delta = demand
+            # if we get here, we didn't converge
+            return False
+        
+        def test():
+            #print(ts)
+            for t in ts:
+                 t.buffer_rate = t.buffer_rate/random.uniform(1,596)
+            #print buffer_rate
+            ts.sort(key=lambda task: task.period)
+            for i, t in enumerate(ts):
+                if not rta(t, ts[0:i]):
+                    return False
+            return True
+        res = test()
+        self.data["FILTER"].add_sample(res)
+        return res
 
-    def rta_norm(self, ts):
+    # TODO: Figure out how to model SHERLOC
+    def sherloc(self, ts):
+        def rta(task,higher_prio_tasks):
+            own_demand = task.__dict__.get('prio_inversion', 0) + task.cost
+            #hp_jitter = task.__dict__.get('jitter', 0)
+            # see if we find a point where the demand is satisfied
+            delta = sum([t.cost for t in higher_prio_tasks]) + own_demand
+            while delta <= task.deadline:
+                #                     Added delay term        + 1 here for pessimism
+                demand = own_demand #+ (((buffer_rate * delta ) + 1) * BUFFER_DELAY)
+                for t in higher_prio_tasks:
+                    demand += t.cost * int(ceil(delta/ t.period)) * (1 + (t.buffer_rate * INDV_DELAY_SHERLOC))
+                # demand *= (1 + (task.buffer_rate * INDV_DELAY))
+                demand += (512 * INDV_DELAY_SHERLOC) + (task.cost * task.buffer_rate * INDV_DELAY_SHERLOC)
+                if demand == delta:
+                    # yep, demand will be met by time
+                    task.response_time = delta #+ task.__dict__.get('jitter', 0)
+                    return True
+                else:
+                    # try again
+                    delta = demand
+            # if we get here, we didn't converge
+            return False
+        def test():
+            ts.sort(key=lambda task: task.period)
+            for i, t in enumerate(ts):
+                if not rta(t, ts[0:i]):
+                    return False
+            return True
+        res = test()
+        self.data["SHERLOC"].add_sample(res)
+        return res
+    
+    def sw(self, ts):
+        def rta(task,higher_prio_tasks):
+            own_demand = task.__dict__.get('prio_inversion', 0) + task.cost
+            #hp_jitter = task.__dict__.get('jitter', 0)
+            # see if we find a point where the demand is satisfied
+            delta = sum([t.cost for t in higher_prio_tasks]) + own_demand
+            while delta <= task.deadline:
+                #                     Added delay term        + 1 here for pessimism
+                demand = own_demand #+ ((BUFFER_RATE * delta ) + 1) * BUFFER_DELAY
+                for t in higher_prio_tasks:
+                    demand += t.cost * int(ceil(delta/ t.period))
+
+                demand *= (1 + 0.5713317929)
+                if demand == delta:
+                    # yep, demand will be met by time
+                    task.response_time = delta #+ task.__dict__.get('jitter', 0)
+                    return True
+                else:
+                    # try again
+                    delta = demand
+            # if we get here, we didn't converge
+            return False
+        def test():
+            ts.sort(key=lambda task: task.period)
+            for i, t in enumerate(ts):
+                if not rta(t, ts[0:i]):
+                    return False
+            return True
+        res = test()
+        self.data["SOFTWARE"].add_sample(res)
+        return res
+    
+    def normal(self, ts):
         def rta(task,higher_prio_tasks):
             own_demand = task.__dict__.get('prio_inversion', 0) + task.cost
             #hp_jitter = task.__dict__.get('jitter', 0)
@@ -259,7 +368,7 @@ class DesignPoint(object):
                     return False
             return True
         res = test()
-        self.data["RTA_NORM"].add_sample(res)
+        self.data["NORMAL"].add_sample(res)
         return res
 
     # NEW
